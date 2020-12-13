@@ -48,9 +48,8 @@ module CountCollision =
   let applySlope (x, y) (rise, run) =
     (x + run, y + rise)
 
-  let countCollisions (initX, initY) inputFile slopeStr =
+  let countCollisions (initX, initY) (mapChunk: SquareType list list) slopeStr =
     let slope = decodeSlope slopeStr
-    let mapChunk = loadInput inputFile
     let mutable currCoord = (initX,initY)
     let mutable collisions = 0
     let maxY = mapChunk.Length-1
@@ -68,12 +67,36 @@ module CountCollision =
         currCoord <- applySlope currCoord slope
     collisions
 
-[<EntryPoint>]
 let main argv =
   match Array.toList argv with
   | inputFile :: slope :: _ ->
     printfn "Using input file '%s' with slope %s" inputFile slope
-    printfn "  > There are %d collisions" (CountCollision.countCollisions (0, 0) inputFile slope)
+    let zeChunk = CountCollision.loadInput inputFile
+    printfn "  > There are %d collisions" (CountCollision.countCollisions (0, 0) zeChunk slope)
+    0
+  | _ ->
+    printfn "Need an input file and slope as first two args"
+    1
+
+[<EntryPoint>]
+let phaseTwo argv =
+  match Array.toList argv with
+  | inputFile :: _ ->
+    let zeChunk = CountCollision.loadInput inputFile
+    let answer =
+      [
+        "1/1"
+        "1/5"
+        "1/3"
+        "1/7"
+        "2/1"
+      ]
+      |> (List.fold (fun curr slope ->
+        let collisions = CountCollision.countCollisions (0,0) zeChunk slope
+        printfn "  > For slope %s found %d collisions" slope collisions
+        curr * (collisions|>float)
+      ) 1.0)
+    printfn "Answer is %.0f" answer
     0
   | _ ->
     printfn "Need an input file and slope as first two args"
