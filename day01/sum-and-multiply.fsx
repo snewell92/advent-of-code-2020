@@ -1,35 +1,42 @@
 #!/usr/bin/dotnet fsi
 
 open System.IO
+open System.Collections.Generic
 
 let INPUT_FILE = "input.txt"
 let TARGET = 2020
 
-let lines = File.ReadAllLines(INPUT_FILE)
-let inputLen = lines.Length
+let numSet = new HashSet<int>()
 
-if inputLen = 0 then
+let sr = new StreamReader(INPUT_FILE)
+
+while not sr.EndOfStream do
+    let succeeded = () |> sr.ReadLine |> int |> numSet.Add
+    if not succeeded then
+        printfn "Something happened while reading data, got to #%d" numSet.Count
+        exit 1
+
+
+if numSet.Count = 0 then
     printfn "No lines of input read in, no answer!"
     exit 0
 
 
-printfn "Read in %d lines of input" inputLen
+printfn "Read in %d lines of input" numSet.Count
 
-let inputReducer =
-    fun r -> Array.fold r (false, (-1, -1)) lines
+let mutable found = false
+let mutable first = -1
+let mutable second = -1
 
-let (_, (first, second)) =
-    inputReducer (fun (found, ans) outer ->
-        if found then
-            (found, ans)
-        else
-            let outerInt = outer |> int
-            inputReducer (fun (found, ans) inner ->
-                if found then
-                    (found, ans)
-                else
-                    let innerInt = inner |> int
-                    if outerInt + innerInt = TARGET then (true, (outerInt, innerInt)) else (found, ans)))
+for num in numSet do
+    if found then ()
+    if num > TARGET then ()
+    let pair = TARGET - num
+    if numSet.Contains pair then
+        found <- true
+        first <- num
+        second <- pair
+    ()
 
 let answer = first * second
 
