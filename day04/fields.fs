@@ -46,20 +46,121 @@ let isKnown pf =
     | Known _ -> true
     | Unknown _ -> false
 
-let isRequiredField kf =
+let isCid kf =
     match kf with
-    | CID _ -> false
-    | _ -> true
+    | CID _ -> true
+    | _ -> false
+
+/// Fulfills part 1
+let isRequiredField kf = not <| isCid kf
+
+let isNum (s: string) =
+    match System.Int32.TryParse s with
+    | true, num -> Some num
+    | _ -> None
+
+let inRange lower upper num = num >= lower && num <= upper
+
+let optIsSomeTrue opt =
+    match opt with
+    | Some b -> b
+    | None -> false
+
+let checkHeight (heightStr: string) =
+    let endsWithCm = heightStr.EndsWith("cm")
+    let endsWithIn = heightStr.EndsWith("in")
+    if endsWithCm then
+        heightStr.Substring(0, 3)
+        |> isNum
+        |> Option.map (inRange 150 193)
+        |> optIsSomeTrue
+    else if endsWithIn then
+        heightStr.Substring(0, 2)
+        |> isNum
+        |> Option.map (inRange 59 76)
+        |> optIsSomeTrue
+    else
+        false
+
+let checkDateRange lower upper =
+    isNum
+    >> Option.map (inRange lower upper)
+    >> optIsSomeTrue
+
+let rec allValidHexDigits (chars: char list) =
+    match chars with
+    | '0' :: rest -> allValidHexDigits rest
+    | '1' :: rest -> allValidHexDigits rest
+    | '2' :: rest -> allValidHexDigits rest
+    | '3' :: rest -> allValidHexDigits rest
+    | '4' :: rest -> allValidHexDigits rest
+    | '5' :: rest -> allValidHexDigits rest
+    | '6' :: rest -> allValidHexDigits rest
+    | '7' :: rest -> allValidHexDigits rest
+    | '8' :: rest -> allValidHexDigits rest
+    | '9' :: rest -> allValidHexDigits rest
+    | 'a' :: rest -> allValidHexDigits rest
+    | 'b' :: rest -> allValidHexDigits rest
+    | 'c' :: rest -> allValidHexDigits rest
+    | 'd' :: rest -> allValidHexDigits rest
+    | 'e' :: rest -> allValidHexDigits rest
+    | 'f' :: rest -> allValidHexDigits rest
+    | [] -> true
+    | _ -> false
+
+let checkValidHexColor (hcl: string) =
+    if hcl.[0] = '#' then
+        hcl.Substring(1)
+        |> List.ofSeq
+        |> allValidHexDigits
+    else
+        false
+
+let checkValidHairColor (ecl: string) =
+    match ecl with
+    | "amb" -> true
+    | "blu" -> true
+    | "brn" -> true
+    | "gry" -> true
+    | "grn" -> true
+    | "hzl" -> true
+    | "oth" -> true
+    | _ -> false
+
+let isStrLen len (str: string) = str.Length = len
+
+let checkValidPid pidStr =
+    if isStrLen 9 pidStr then
+        pidStr
+        |> isNum
+        |> Option.map (fun _ -> true)
+        |> optIsSomeTrue
+    else
+        false
+
+/// Fulfills part 2
+let isValidField kf =
+    match kf with
+    | CID _ -> true
+    | BYR byrStr -> checkDateRange 1920 2002 byrStr
+    | IYR iyrStr -> checkDateRange 2010 2020 iyrStr
+    | EYR eyrStr -> checkDateRange 2020 2030 eyrStr
+    | HGT hgtStr -> checkHeight hgtStr
+    | HCL hclStr -> checkValidHexColor hclStr
+    | ECL eclStr -> checkValidHairColor eclStr
+    | PID pidStr -> checkValidPid pidStr
 
 let isPassportValid passport =
-    let count =
+    let (count, isValid, hasCid) =
         fst passport
-        |> List.fold (fun c field ->
+        |> List.fold (fun (c, allValid, hasCid) field ->
             match field with
-            | Known f -> if isRequiredField f then c + 1 else c
-            | Unknown _ -> c) 0
+            | Known f -> (c + 1, allValid && isValidField f, hasCid || isCid f)
+            | Unknown _ -> (c, allValid, hasCid)) (0, true, false)
 
-    (fst passport, count = 7)
+    (fst passport,
+     isValid
+     && (count = 8 || (count = 7 && not hasCid)))
 
 let mkEmptyPassport (): Passport = ([], false)
 
