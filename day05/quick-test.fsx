@@ -15,10 +15,20 @@ let getSeqFromInputFile (inputFile: string) =
         sr.Close()
     }
 
-let maxId =
+let missingId =
     "input.txt"
     |> getSeqFromInputFile
     |> Seq.map (fun line -> (parseSeat line).id)
-    |> Seq.max
+    |> List.ofSeq
+    |> List.sort
+    |> List.fold (fun (candidate, prev) seatId ->
+        if prev = -1 then
+            (candidate, seatId)
+        else if candidate = -1 then
+            let diff = seatId - prev
+            if diff = 1 then (candidate, seatId) else (seatId - 1, seatId)
+        else
+            (candidate, prev)) (-1, -1)
+    |> fst
 
-printfn "The max id is %d" maxId
+printfn "My seat id is %d" missingId
