@@ -48,8 +48,19 @@ let uniqGroupAnswers: GroupAnswers -> char list = groupToSeq >> uniq
 
 let countGroup ga = (uniqGroupAnswers ga).Length
 
+let countWhereEveryoneAnswered (ga: GroupAnswers) =
+    let targetCount = ga.Length
+    let tracker = Dictionary()
+    for indiv in ga do
+        for ans in indiv do
+            if tracker.ContainsKey(ans) then tracker.[ans] <- tracker.[ans] + 1 else tracker.Add(ans, 1)
+    let mutable total = 0
+    for kvp in tracker do
+        if kvp.Value = targetCount then total <- total + 1
+    total
+
 let countAllInFile inputFile =
     inputFile
     |> mkInputSeq
-    |> Seq.map countGroup
+    |> Seq.map countWhereEveryoneAnswered
     |> Seq.reduce (+)
