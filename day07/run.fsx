@@ -3,8 +3,8 @@ open System.Collections.Generic
 
 type Rule =
     | LeafRule of string
-    | PartialRule of string * string list
-    | InternalRule of string * Rule list
+    | PartialRule of string * (string * int) list
+    | InternalRule of string * (Rule * int) list
 
 let extractChildRuleList rule =
     match rule with
@@ -12,28 +12,7 @@ let extractChildRuleList rule =
     | PartialRule _ -> []
     | InternalRule (_, childRules) -> childRules
 
-let rec anyRuleIs target =
-    List.fold
-        (fun found rule ->
-            match rule with
-            | LeafRule name -> found || name = target
-            | PartialRule _ -> found
-            | InternalRule (name, childRules) ->
-                found
-                || name = target
-                || (anyRuleIs target childRules))
-        false
-
-let ruleContains target rule =
-    match rule with
-    | LeafRule _ -> false
-    | PartialRule _ -> false
-    | InternalRule (name, childRules) -> if name = target then false else anyRuleIs target childRules
-
 let targetBag = "shiny gold"
-let mutable containsHit = 0
-
-let addHit () = containsHit <- containsHit + 1
 
 let knownCache = Dictionary()
 let ruleCache = Dictionary()
@@ -49,7 +28,9 @@ let extractChildRuleNames (str: string) =
 
         for rule in ruleParts do
             let bagIdx = rule.IndexOf("bag")
-            yield rule.Substring(2, bagIdx - 2).Trim()
+            let num = rule.Substring(0, 1) |> int
+            let rule = rule.Substring(2, bagIdx - 2).Trim()
+            yield (rule, num)
     }
 
 let buildRuleFromString (str: string) =
@@ -67,9 +48,10 @@ let buildRuleFromString (str: string) =
         rule
 
 let allKnown =
-    List.fold (fun known name -> known && knownCache.ContainsKey(name)) true
+    List.fold (fun known (name, _) -> known && knownCache.ContainsKey(name)) true
 
-let fetchRules = List.map (fun n -> knownCache.[n])
+let fetchRules =
+    List.map (fun (name, count) -> (knownCache.[name], count))
 
 let mkInternal (name, childRules) =
     InternalRule(name, fetchRules childRules)
@@ -84,9 +66,6 @@ let passRules () =
         | PartialRule (name, childRules) ->
             if allKnown childRules then
                 let fullInternalRule = mkInternal (name, childRules)
-
-                if ruleContains targetBag fullInternalRule
-                then addHit ()
 
                 knownCache.Add(name, fullInternalRule)
                 ruleCache.[name] <- fullInternalRule
@@ -107,7 +86,18 @@ let buildRules lineSeq =
     while not finished do
         finished <- passRules ()
 
-    containsHit
+let rec calcRulesBagsCount rule adj =
+    match rule with
+    | LeafRule _ -> 1
+    | PartialRule _ -> 1
+    | InternalRule (_, children) ->
+        adj
+        + (children
+           |> List.map (fun (rule, num) -> num * (calcRulesBagsCount rule 1))
+           |> List.reduce (+))
+
+let calcChildBags ruleName =
+    calcRulesBagsCount ruleCache.[ruleName] 0
 
 let inputToSeq (input: string) =
     seq {
@@ -119,7 +109,6 @@ let inputToSeq (input: string) =
         sr.Close()
     }
 
-"input.txt"
-|> inputToSeq
-|> buildRules
-|> printfn "Found %d hits"
+"input.txt" |> inputToSeq |> buildRules
+
+printfn "%s must contain %d other bags" targetBag (calcChildBags targetBag)
