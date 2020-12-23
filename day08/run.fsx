@@ -9,6 +9,8 @@ let visit = visitedLines.Add
 
 let isVisited = visitedLines.Contains
 
+let reset = visitedLines.Clear
+
 type Command =
     | Noop
     | Acc
@@ -51,14 +53,15 @@ let getNextAccum currAccum currInstruction =
 
 let fileName = "input.txt"
 
-let program =
+let originalProgram =
     fileName
     |> linesFromFile
     |> Seq.map parseInstruction
     |> List.ofSeq
 
-let calcAccumTillRepeat () =
+let runProgram (program: Instruction list) =
     let mutable accum = 0
+    let mutable infiniteLoop = false
     let mutable keepGoing = true
     let mutable currentInstructionIndex = 0
 
@@ -67,8 +70,49 @@ let calcAccumTillRepeat () =
         let currInstruction = program.[currentInstructionIndex]
         accum <- getNextAccum accum currInstruction
         currentInstructionIndex <- getNextIndex currInstruction currentInstructionIndex
-        if isVisited currentInstructionIndex then keepGoing <- false
 
-    accum
+        if isVisited currentInstructionIndex then
+            infiniteLoop <- true
+            keepGoing <- false
 
-printfn "The accum is at %d right before the infinite loop starts for %s" (calcAccumTillRepeat ()) fileName
+        if currentInstructionIndex >= program.Length
+           || currentInstructionIndex <= 0 then
+            keepGoing <- false
+
+    reset ()
+    (accum, infiniteLoop)
+
+let flip ins =
+    match ins with
+    | Noop -> (Jmp, true)
+    | Jmp -> (Noop, true)
+    | Acc -> (Acc, false)
+
+let mutateProgram (idx: int) (newCmd: Command) =
+    List.mapi (fun i el -> if i = idx then (newCmd, snd el) else el)
+
+let genNewPrograms (program: Instruction list): (Instruction list) seq =
+    seq {
+        for i in 0 .. (program.Length - 1) do
+            match flip <| fst program.[i] with
+            | (x, true) -> yield mutateProgram i x program
+            | _ -> ()
+    }
+
+let findAnswer () =
+    let mutable stop = false
+    let mutable answer = -1
+
+    for candidate in genNewPrograms originalProgram do
+        if stop then ()
+        let (finalAccum, wasInfinite) = runProgram candidate
+
+        if not wasInfinite then
+            answer <- finalAccum
+            stop <- true
+
+        ()
+
+    answer
+
+printfn "The final, corrected, accum is %d for %s" (findAnswer ()) fileName
