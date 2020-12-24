@@ -2,7 +2,9 @@
 
 open System.IO
 
-let PREAMBLE_LEN = 25
+/// The only number that doesn't obey the rule (from part 1)
+// let TARGET_NUM = 127L
+let TARGET_NUM = 257342611L
 
 let iterateListTillFound (list: 'a list) f =
     let mutable answer = None
@@ -33,17 +35,38 @@ let readInput (inputFile: string) =
         sr.Close()
     }
 
-let input = readInput "input.txt"
+let findMaxAndMin (list: int64 list) = (List.max list, List.min list)
 
-let mutable preamble =
-    Seq.take PREAMBLE_LEN input
-    |> Seq.rev
-    |> List.ofSeq
+let addPair (x: int64, y: int64) = x + y
 
-let nums = Seq.skip PREAMBLE_LEN input
+let getSublist x y list =
+    list |> List.skip x |> List.take (y - x)
 
-for n in nums do
-    if Option.isNone <| findTargetFromSum preamble n
-    then printfn "The first number to violate the rule is %d" n
+let addSublist x y (list: int64 list) = list |> getSublist x y |> List.sum
 
-    preamble <- shiftStackList preamble n
+let findSublist target list =
+    let mutable candidateList = []
+    let mutable startIdx = 0
+    let mutable endIdx = 1
+    let mutable keepGoing = true
+
+    while keepGoing do
+        let currSublistSum = addSublist startIdx endIdx list
+
+        if currSublistSum = target then
+            keepGoing <- false
+            candidateList <- getSublist startIdx endIdx list
+        else if currSublistSum > target then
+            startIdx <- startIdx + 1
+            endIdx <- startIdx + 1
+        else
+            endIdx <- endIdx + 1
+
+    candidateList
+
+readInput "input.txt"
+|> List.ofSeq
+|> findSublist TARGET_NUM
+|> findMaxAndMin
+|> addPair
+|> printfn "The weakness is %d"
