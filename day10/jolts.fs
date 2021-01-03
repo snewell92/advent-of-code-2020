@@ -28,8 +28,6 @@ let calcSuccessorsAtIndex (sortedBag: int64 list) (index, currNum) =
 
         choices
 
-let countCache = new Dictionary<int, int64>()
-
 let rememberHit (cache: Dictionary<int, int64>) k v = cache.Add(k, v)
 
 let checkCache (cache: Dictionary<int, int64>) k =
@@ -57,4 +55,4 @@ let rec calcHitsRec (cache: Dictionary<int, int64>) (sortedBag: int64 list) (tar
         0L
 
 let calcNumOfValidPermutations (sortedBag: int64 list) =
-    calcHitsRec countCache sortedBag (List.last sortedBag) 0
+    calcHitsRec (Dictionary<int, int64>()) sortedBag (List.last sortedBag) 0
